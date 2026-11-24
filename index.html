@@ -32,6 +32,10 @@ label.ck{display:flex;gap:6px;align-items:center;cursor:pointer;white-space:nowr
 .tabs{display:flex;gap:4px;margin:4px 0 10px;flex-wrap:wrap;align-items:center}
 .tabs select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);margin-left:8px}
 .brr:hover td{background:var(--blue-t)}
+.cp{position:sticky;right:0;z-index:1;background:var(--card);box-shadow:-1px 0 0 var(--line);text-align:center;padding:6px 8px;white-space:nowrap}
+th.cp{background:var(--blue-t);z-index:2}
+.cpb{font:inherit;font-size:.82rem;padding:5px 10px;border:1px solid var(--blue);background:transparent;color:var(--blue);border-radius:8px;cursor:pointer;white-space:nowrap}
+.cpb.ok{background:var(--ok);border-color:var(--ok);color:#fff}
 .bt>tbody>tr.brr>td:first-child,.bt>thead>tr>th:first-child{position:sticky;left:0;z-index:1;background:var(--card);box-shadow:1px 0 0 var(--line)}
 .bt>thead>tr>th:first-child{background:var(--blue-t);z-index:2}
 .bc{padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer}
@@ -174,11 +178,11 @@ function draw(){
  const show=rows.slice(0,limit);
  const price=p=>p[5]==null?'-':fmt(p[5],2);
  const pr=(d,pp)=>d?[`<span class="tag">ลด ${d}%</span>`,`<span class="pp">${fmt(pp,2)}</span>`]:['<span class="out">-</span>','<span class="out">-</span>'];
- let h;
+ let h;CPL=show;
  if(view===3){h=brHtml(show)}
  else if(view===1){
-  h='<table><thead><tr><th>สาขา</th><th>AM</th>'+(OC?'<th class="n">ระยะทาง (กม.)</th>':'')+'<th>รหัสสินค้า</th><th>ชื่อสินค้า</th><th class="n">ราคาเต็ม</th><th>โปรปีเก่า</th><th class="n">ราคาโปร/เส้น</th><th>ปีผลิต</th><th>ปียาง</th><th class="n">คงคลัง</th></tr></thead><tbody>'+
-  show.map(x=>{const p=P[x[1]],[t,q]=pr(x[5],x[6]);return `<tr><td>${esc(B[x[0]])}</td><td>${esc(AM[BA[x[0]]]||'-')}</td>${OC?`<td class="n">${dist[x[0]]==null?'-':x[0]===OI?'0 (ต้นทาง)':fmt(dist[x[0]],1)}</td>`:''}<td>${esc(p[0])}</td><td>${esc(p[1])}</td><td class="n">${price(p)}</td><td>${t}</td><td class="n">${q}</td><td>${x[2]}</td><td>${x[3]}</td><td class="n ${x[4]<=0?'out':''}">${fmt(x[4])}</td></tr>`}).join('');
+  h='<table><thead><tr><th>สาขา</th><th>AM</th>'+(OC?'<th class="n">ระยะทาง (กม.)</th>':'')+'<th>รหัสสินค้า</th><th>ชื่อสินค้า</th><th class="n">ราคาเต็ม</th><th>โปรปีเก่า</th><th class="n">ราคาโปร/เส้น</th><th>ปีผลิต</th><th>ปียาง</th><th class="n">คงคลัง</th><th class="cp">ส่งไลน์</th></tr></thead><tbody>'+
+  show.map((x,i)=>{const p=P[x[1]],[t,q]=pr(x[5],x[6]);return `<tr><td>${esc(B[x[0]])}</td><td>${esc(AM[BA[x[0]]]||'-')}</td>${OC?`<td class="n">${dist[x[0]]==null?'-':x[0]===OI?'0 (ต้นทาง)':fmt(dist[x[0]],1)}</td>`:''}<td>${esc(p[0])}</td><td>${esc(p[1])}</td><td class="n">${price(p)}</td><td>${t}</td><td class="n">${q}</td><td>${x[2]}</td><td>${x[3]}</td><td class="n ${x[4]<=0?'out':''}">${fmt(x[4])}</td><td class="cp"><button type="button" class="cpb" data-i="${i}">คัดลอก</button></td></tr>`}).join('');
  } else {
   h='<table><thead><tr><th>รหัสสินค้า</th><th>ชื่อสินค้า</th><th>ปียาง</th><th class="n">ราคาเต็ม</th><th>โปรปีเก่า</th><th class="n">ราคาโปร/เส้น</th><th class="n">สาขาที่มี</th><th class="n">คงคลังรวม</th>'+(OC?'<th>สาขาใกล้สุดที่มียาง</th><th class="n">ระยะทาง (กม.)</th>':'')+'</tr></thead><tbody>'+
   show.map(g=>{const p=P[g.p],[t,q]=pr(g.d,g.pp);return `<tr><td>${esc(p[0])}</td><td>${esc(p[1])}</td><td>${g.y}</td><td class="n">${price(p)}</td><td>${t}</td><td class="n">${q}</td><td class="n">${fmt(g.n)}</td><td class="n">${fmt(g.q)}</td>${OC?`<td>${g.nb==null?'-':esc(B[g.nb])}</td><td class="n">${g.k==null?'-':fmt(g.k,1)}</td>`:''}</tr>`}).join('');
@@ -187,6 +191,23 @@ function draw(){
  $('more').hidden=rows.length<=limit;
  $('more').textContent=`แสดงเพิ่ม (เหลืออีก ${fmt(rows.length-limit)} รายการ)`;
 }
+let CPL=[];
+const money=n=>{n=Math.round(n*100)/100;return Number.isInteger(n)?fmt(n):fmt(n,2)};
+function quote(x){
+ const p=P[x[1]],full=p[5],d=x[5],pp=x[6];
+ const L=['🛞 เสนอราคายางรถยนต์','','สาขา: '+B[x[0]],'รหัสสินค้า: '+String(p[0]).trim(),'ชื่อสินค้า: '+String(p[1]).trim(),'ปีผลิต: '+(x[2]||'-')+(x[3]?' (ปียาง '+x[3]+')':'')];
+ if(full==null){L.push('ราคา: สอบถามเพิ่มเติม');return L.join('\n')}
+ L.push('ราคาเต็ม: '+money(full)+' บาท/เส้น');
+ if(d&&pp){L.push('โปรปีเก่า: ลด '+d+'%','ราคาโปรต่อเส้น: '+money(pp)+' บาท','ราคาต่อชุด (4 เส้น): '+money(pp*4)+' บาท','','* โปรโมชั่นถึง 31 ธ.ค. 2569 เมื่อซื้อ 4 เส้น เฉพาะยางที่มีในสต็อก')}
+ else{L.push('โปรปีเก่า: ไม่มี','ราคาต่อชุด (4 เส้น): '+money(full*4)+' บาท')}
+ return L.join('\n');
+}
+function copyTxt(t,b){
+ const done=()=>{b.textContent='✓ คัดลอกแล้ว';b.classList.add('ok');setTimeout(()=>{b.textContent='คัดลอก';b.classList.remove('ok')},1500)};
+ const fb=()=>{const a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();let ok=false;try{ok=document.execCommand('copy')}catch(e){}document.body.removeChild(a);if(ok)done();else prompt('คัดลอกข้อความนี้',t)};
+ if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(t).then(done,fb);else fb();
+}
+$('out').addEventListener('click',e=>{const b=e.target.closest('.cpb');if(!b)return;e.stopPropagation();copyTxt(quote(CPL[+b.dataset.i]),b)});
 const OPEN=new Set();
 function ykeys(rs){const ks=[...new Set(rs.flatMap(g=>Object.keys(g.y)))];const ord=k=>k==='≤2020'?0:k==='ไม่ระบุ'?9999:+k;return ks.sort((a,b)=>ord(a)-ord(b))}
 const MOB=()=>!!(window.matchMedia&&matchMedia('(max-width:700px)').matches);
